@@ -192,3 +192,75 @@ void my_free(void *ptr) {
 				@BASTOS
 	realloc & calloc
 	----------------------------------------------------	*/
+
+
+
+void *my_calloc(size_t size_el, size_t nb_el) {
+	if (call_memory_leak == 0)     // Linked through atexit
+	{
+		call_memory_leak = 1;
+		atexit(memory_leak);    // Verify a function call in order to check memory_leak through atexit by single-use call of it.
+	}
+	
+	void *addr = NULL;
+
+	if(size_el == 0) {
+		printf("size is null\n");
+		return(NULL);
+	}
+	
+    if(nb_el == 0) {
+		printf("number of elements is null\n");
+		return(NULL);
+	}
+
+    addr = my_malloc(nb_el * size_el);
+
+    if(addr){
+
+        char *byte = addr;
+
+        while(byte != addr+size_el*nb_el){
+            //memset(&byte, 0, nb_el);
+			*byte=0;
+            printf("Value test per byte : %c\n", *byte);
+            byte++;
+        }
+
+    }
+	return(addr);
+}
+
+void *my_realloc(void *ptr, size_t size){
+    t_chunk *new_alloc = head;      // Running through the meta data linked list
+
+	if(new_alloc == NULL){
+        printf("Erreur : header null\n");  
+        call_memory_leak = 1;
+        return(MAP_FAILED);
+    }
+
+    while(new_alloc->m_addr!=ptr){
+
+        if(new_alloc == NULL){
+            printf("Erreur : bloc non trouvé\n");  
+            call_memory_leak = 1;
+            return(MAP_FAILED);
+        }
+
+		new_alloc = new_alloc->m_next;
+
+    }
+
+    new_alloc->m_addr = mremap(new_alloc->m_addr, new_alloc->m_size, size, MREMAP_MAYMOVE);
+	
+	if(new_alloc->m_addr == MAP_FAILED){
+		printf("Erreur : Aucun espace suffisant n'a été trouvé (MAP_FAILED)\n");
+		call_memory_leak = 1;
+		return(MAP_FAILED);
+	}
+
+    new_alloc->m_size = size;
+    printf("Reallocation mémoire à l'espace mémoire : %p\n", new_alloc->m_addr);
+    return(new_alloc->m_addr);
+}
